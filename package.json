@@ -1,0 +1,33 @@
+{
+  "name": "community-crew-sdk-scripts",
+  "version": "1.0.0",
+  "description": "Monorepo for Zeplin Node SDK scripts used by Community Crew",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zeplin/community-crew-sdk-scripts.git"
+  },
+  "author": "Josh Harsono",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zeplin/community-crew-sdk-scripts/issues"
+  },
+  "homepage": "https://github.com/zeplin/community-crew-sdk-scripts#readme",
+  "dependencies": {
+    "@zeplin/sdk": "^1.13.0",
+    "axios": "^0.27.2",
+    "axios-rate-limit": "^1.3.0",
+    "batch-promises": "^0.0.3",
+    "dotenv": "^16.0.1",
+    "progress": "^2.0.3"
+  },
+  "devDependencies": {
+    "eslint": "^8.19.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.26.0"
+  }
+}

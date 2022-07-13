@@ -102,3 +102,9 @@ dist
 
 # TernJS port file
 .tern-port
+
+# DS Store
+.ds_store
+
+# Output folders for scripts
+Output
