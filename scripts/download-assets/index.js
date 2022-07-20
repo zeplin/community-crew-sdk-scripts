@@ -12,68 +12,72 @@ config({ path: '../../.env' });
 // Extract PAT and Workspace from .env
 const { PERSONAL_ACCESS_TOKEN } = process.env;
 
-// Directory name for saved screens
-const dir = 'Output';
-
-// Project ID
-const project = '62be376e04c5d21b2b0faa7d';
+// Edit these options to your preferences
+// Update the "formats" array accordingly to the formats you want to include in download.
+// Supported formats include SVG, PNG, JPEG, PDF, and WebP.
+const PROJECT_OPTIONS = {
+  dir: 'Output',
+  projectId: '62cdd21c6431a9117056d259',
+  formats: ['svg', 'png', 'jpg', 'webp', 'pdf'],
+};
 
 // Instantiate ZeplinClient with access token
 const zeplinClient = new ZeplinApi(new Configuration({ accessToken: PERSONAL_ACCESS_TOKEN }));
 
 const getProjectScreens = async (projectId) => {
-  const screens = await zeplinClient.screens.getProjectScreens(projectId);
+  const { data } = await zeplinClient.screens.getProjectScreens(projectId);
 
-  return screens.data.map((screen) => screen.id);
+  return data;
 };
 
-const getAssetData = async (screenId) => {
-  const assets = [];
-  const { data } = await zeplinClient.screens.getLatestScreenVersion(project, screenId);
-  data.assets.forEach((asset) => {
-    const { displayName, contents } = asset;
-    contents.forEach((content) => {
-      const { url, format, density } = content;
-      const filename = `${displayName}-${density}x.${format}`;
-      assets.push({ url, filename });
-    });
+const getAssetData = async (screen) => {
+  const { id, name } = screen;
+  const { data } = await zeplinClient.screens
+    .getLatestScreenVersion(PROJECT_OPTIONS.projectId, id);
+  return data.assets.flatMap(({ displayName, contents }) => {
+    // remove any asset that are not in the formats defined in PROJECT_OPTIONS.formats
+    const filteredContents = contents.filter((content) => (
+      PROJECT_OPTIONS.formats.includes(content.format)
+    ));
+    return filteredContents.map(({ url, format, density }) => ({
+      name,
+      url,
+      filename: `${displayName.replace(/\//g, '\u2215')}-${density}x.${format}`,
+    }));
   });
-  return assets;
 };
 
 // Zeplin API rate limit is 200 requests per user per minute.
 // Use rateLimit to extend Axios to only make 200 requests per minute (60,000ms)
 const http = rateLimit(axios.create(), { maxRequests: 200, perMilliseconds: 60000 });
 
-const downloadAsset = async (asset, progress) => {
-  const { url, filename } = asset;
+const downloadAsset = async ({ name, url, filename }, progress) => {
+  const { dir } = PROJECT_OPTIONS;
   const { data } = await http.get(url, { responseType: 'stream' });
 
-  await fs.mkdir(`${dir}`, { recursive: true });
-  await fs.writeFile(`${dir}/${filename}`, data);
+  await fs.mkdir(`${dir}/${name}`, { recursive: true });
+  await fs.writeFile(`${dir}/${name}/${filename}`, data);
 
   progress.tick();
 };
 
 const main = async () => {
-  const projectScreens = await getProjectScreens(project);
+  const projectScreens = await getProjectScreens(PROJECT_OPTIONS.projectId);
 
   const assets = (await Promise.all(projectScreens.map(
     async (screen) => getAssetData(screen),
   ))).flat();
-  console.log(`Found ${assets.length} assets`);
 
-  // console.log(assets);
-  const assetsBar = new Progress('  Fetching assets [:bar] :rate/bps :percent :etas', {
+  const assetsBar = new Progress('  Downloading project assets [:bar] :rate/bps :percent :etas', {
     complete: '=',
     incomplete: ' ',
     width: 20,
     total: assets.length,
   });
 
-  // // Remove existing Output folder and create new one at start of script
-  await fs.rm(dir, { recursive: true, force: true });
-  await fs.mkdir(dir);
+  // Remove existing Output folder and create new one at start of script
+  await fs.rm(PROJECT_OPTIONS.dir, { recursive: true, force: true });
+  await fs.mkdir(PROJECT_OPTIONS.dir);
 
   await batchPromises(10, assets, (asset) => downloadAsset(asset, assetsBar));
 };
