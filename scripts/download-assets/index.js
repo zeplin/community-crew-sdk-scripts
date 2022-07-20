@@ -10,10 +10,12 @@ import rateLimit from 'axios-rate-limit';
 config({ path: '../../.env' });
 
 // Extract PAT and Workspace from .env
-const { PERSONAL_ACCESS_TOKEN, WORKSPACE_ID } = process.env;
+const { PERSONAL_ACCESS_TOKEN } = process.env;
 
 // Directory name for saved screens
 const dir = 'Output';
+
+// Project ID
 const project = '62be376e04c5d21b2b0faa7d';
 
 // Instantiate ZeplinClient with access token
@@ -28,23 +30,14 @@ const getProjectScreens = async (projectId) => {
 const getAssetData = async (screenId) => {
   const assets = [];
   const { data } = await zeplinClient.screens.getLatestScreenVersion(project, screenId);
-  data.assets.forEach(asset => {
+  data.assets.forEach((asset) => {
     const { displayName, contents } = asset;
-    contents.forEach(content => {
+    contents.forEach((content) => {
       const { url, format, density } = content;
       const filename = `${displayName}-${density}x.${format}`;
       assets.push({ url, filename });
     });
   });
-  // get url and filename in a useable format
-  // contents.forEach((image) => {
-  //   const { url, format, density } = image;
-  //   const filename = `${displayName}-${density}x.${format}`;
-  //   assets.push({
-  //     url,
-  //     filename,
-  //   });
-  // });
   return assets;
 };
 
