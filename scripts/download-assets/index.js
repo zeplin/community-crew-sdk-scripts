@@ -23,7 +23,7 @@ const PROJECT_OPTIONS = {
 
 // Zeplin API rate limit is 200 requests per user per minute.
 // Use rateLimit to extend Axios to only make 200 requests per minute (60,000ms)
-const http = rateLimit(axios.create(), { maxRequests: 150, perMilliseconds: 60000 });
+const http = rateLimit(axios.create(), { maxRequests: 200, perMilliseconds: 60000 });
 
 // Instantiate ZeplinClient with access token, add our http client to the ZeplinClient
 const zeplinClient = new ZeplinApi(new Configuration(
@@ -55,14 +55,16 @@ const getAssetData = async (screen) => {
   });
 };
 
-
 const downloadAsset = async ({ name, url, filename }, progress) => {
   const { dir } = PROJECT_OPTIONS;
-  const { data } = await axios.get(url, { responseType: 'stream' });
-
-  await fs.mkdir(`${dir}/${name}`, { recursive: true });
-  await fs.writeFile(`${dir}/${name}/${filename}`, data);
-
+  try {
+    const { data } = await axios.get(url, { responseType: 'stream' });
+    await fs.mkdir(`${dir}/${name}`, { recursive: true });
+    await fs.writeFile(`${dir}/${name}/${filename}`, data);
+  } catch (err) {
+    console.log(`Error downloading ${name}`);
+    console.log(err);
+  }
   progress.tick();
 };
 
