@@ -62,36 +62,30 @@ const downloadAsset = async ({ name, url, filename }, dir, progress) => {
   progress.tick();
 };
 
-const main = async () => {
-  // add command line options
-  program
-    .requiredOption('-p, --projectId <projectId>', 'Project ID')
-    .option('-d, --directory <dir>', 'Output directory', 'Output')
-    .option('-f, --formats <formats...>', 'Formats to download', ['png', 'jpg', 'webp', 'svg', 'pdf']);
+// add command line options
+program
+  .requiredOption('-p, --projectId <projectId>', 'Project ID')
+  .option('-d, --directory <dir>', 'Output directory', 'Output')
+  .option('-f, --formats <formats...>', 'Formats to download', ['png', 'jpg', 'webp', 'svg', 'pdf'])
+  .action(async ({ projectId, directory, formats }) => {
+    const projectScreens = await getProjectScreens(projectId);
 
-  // parse the command line arguments
-  await program.parseAsync(process.argv);
+    const assets = (await Promise.all(projectScreens.map(
+      async (screen) => getAssetData(screen, projectId, formats),
+    ))).flat();
 
-  const { projectId, directory, formats } = program.opts();
+    const assetsBar = new Progress('  Downloading project assets [:bar] :rate/bps :percent :etas', {
+      complete: '=',
+      incomplete: ' ',
+      width: 20,
+      total: assets.length,
+    });
 
-  const projectScreens = await getProjectScreens(projectId);
+    // Remove existing Output folder and create new one at start of script
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.mkdir(directory);
 
-  const assets = (await Promise.all(projectScreens.map(
-    async (screen) => getAssetData(screen, projectId, formats),
-  ))).flat();
-
-  const assetsBar = new Progress('  Downloading project assets [:bar] :rate/bps :percent :etas', {
-    complete: '=',
-    incomplete: ' ',
-    width: 20,
-    total: assets.length,
+    await batchPromises(10, assets, (asset) => downloadAsset(asset, directory, assetsBar));
   });
 
-  // Remove existing Output folder and create new one at start of script
-  await fs.rm(directory, { recursive: true, force: true });
-  await fs.mkdir(directory);
-
-  await batchPromises(10, assets, (asset) => downloadAsset(asset, directory, assetsBar));
-};
-
-await main();
+program.parse(process.argv);
