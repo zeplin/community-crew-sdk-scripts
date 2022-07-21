@@ -80,7 +80,7 @@ const main = async () => {
     async (screen) => getAssetData(screen, projectId, formats),
   ))).flat();
 
-  const assetsBar = new Progress('  Downloading project assets to [:bar] :rate/bps :percent :etas', {
+  const assetsBar = new Progress('  Downloading project assets [:bar] :rate/bps :percent :etas', {
     complete: '=',
     incomplete: ' ',
     width: 20,
