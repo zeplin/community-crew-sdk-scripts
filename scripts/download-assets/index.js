@@ -21,8 +21,16 @@ const PROJECT_OPTIONS = {
   formats: ['svg', 'png', 'jpg', 'webp', 'pdf'],
 };
 
-// Instantiate ZeplinClient with access token
-const zeplinClient = new ZeplinApi(new Configuration({ accessToken: PERSONAL_ACCESS_TOKEN }));
+// Zeplin API rate limit is 200 requests per user per minute.
+// Use rateLimit to extend Axios to only make 200 requests per minute (60,000ms)
+const http = rateLimit(axios.create(), { maxRequests: 150, perMilliseconds: 60000 });
+
+// Instantiate ZeplinClient with access token, add our http client to the ZeplinClient
+const zeplinClient = new ZeplinApi(new Configuration(
+  { accessToken: PERSONAL_ACCESS_TOKEN },
+  undefined,
+  http,
+));
 
 const getProjectScreens = async (projectId) => {
   const { data } = await zeplinClient.screens.getProjectScreens(projectId);
@@ -42,18 +50,15 @@ const getAssetData = async (screen) => {
     return filteredContents.map(({ url, format, density }) => ({
       name,
       url,
-      filename: `${displayName.replace(/\//g, '\u2215')}-${density}x.${format}`,
+      filename: `${displayName.replaceAll('/', '-')}-${density}x.${format}`,
     }));
   });
 };
 
-// Zeplin API rate limit is 200 requests per user per minute.
-// Use rateLimit to extend Axios to only make 200 requests per minute (60,000ms)
-const http = rateLimit(axios.create(), { maxRequests: 200, perMilliseconds: 60000 });
 
 const downloadAsset = async ({ name, url, filename }, progress) => {
   const { dir } = PROJECT_OPTIONS;
-  const { data } = await http.get(url, { responseType: 'stream' });
+  const { data } = await axios.get(url, { responseType: 'stream' });
 
   await fs.mkdir(`${dir}/${name}`, { recursive: true });
   await fs.writeFile(`${dir}/${name}/${filename}`, data);
