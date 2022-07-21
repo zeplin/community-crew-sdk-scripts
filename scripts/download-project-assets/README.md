@@ -1,4 +1,4 @@
-# Zeplin Community: Download all workspace screens
+# Zeplin Community: Download all project assets
 
 This command line tool utilizes the [Zeplin Node SDK](https://github.com/zeplin/javascript-sdk) download all assets in a project, creating a new directory for each screen in your project. Zeplin supports SVG, PNG, PDF, JPG, and WEBP image formats depending on your project type. All formats will by download by default, but you can specify which formats you want downloaded in the command line options with `-f <formats>`. More examples below.
 
