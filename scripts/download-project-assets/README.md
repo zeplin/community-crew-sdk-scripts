@@ -1,6 +1,6 @@
 # Zeplin Community: Download all project assets
 
-This command line tool utilizes the [Zeplin Node SDK](https://github.com/zeplin/javascript-sdk) download all assets in a project, creating a new directory for each screen in your project. Zeplin supports SVG, PNG, PDF, JPG, and WEBP image formats depending on your project type. All formats will by download by default, but you can specify which formats you want downloaded in the command line options with `-f <formats>`. More examples below.
+This command line tool utilizes the [Zeplin Node SDK](https://github.com/zeplin/javascript-sdk) download all assets in a project in a directory called "Output" and then creating a new directory within "Output" for each screen in your project. Zeplin supports SVG, PNG, PDF, JPG, and WEBP image formats depending on your project type. All formats will by download by default, but you can specify which formats you want downloaded in the command line options with `-f <formats>`. More examples below.
 
 ## Getting Started
 
@@ -34,13 +34,13 @@ Options:
 
 ## Examples
 
-Download all asset formats from project 12345 into the "Assets" directory
+Download all asset formats from project 12345 into the "Output" (default) directory
 ```console
-$ node download-project-assets --projectId 12345 --directory Assets
+$ node download-project-assets --projectId 12345 
 ```
 
-Download only SVG and PNG assets from project 12345 into the "Output" directory
+Download only SVG and PNG assets from project 12345 into the "Assets" directory
 
 ```console
-$ node download-project-assets -p 12345 -d Output -f svg png
+$ node download-project-assets -p 12345 -d Assets -f svg png
 ```

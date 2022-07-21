@@ -66,7 +66,7 @@ const main = async () => {
   // add command line options
   program
     .requiredOption('-p, --projectId <projectId>', 'Project ID')
-    .requiredOption('-d, --directory <dir>', 'Output directory')
+    .option('-d, --directory <dir>', 'Output directory', 'Output')
     .option('-f, --formats <formats...>', 'Formats to download', ['png', 'jpg', 'webp', 'svg', 'pdf']);
 
   // parse the command line arguments
