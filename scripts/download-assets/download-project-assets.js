@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import batchPromises from 'batch-promises';
 import { config } from 'dotenv';
 import rateLimit from 'axios-rate-limit';
+import { Command } from 'commander';
 
 // Set your dotenv config to the root directory where the .env file lives
 config({ path: '../../.env' });
@@ -12,14 +13,8 @@ config({ path: '../../.env' });
 // Extract PAT and Workspace from .env
 const { PERSONAL_ACCESS_TOKEN } = process.env;
 
-// Edit these options to your preferences
-// Update the "formats" array accordingly to the formats you want to include in download.
-// Supported formats include SVG, PNG, JPEG, PDF, and WebP.
-const PROJECT_OPTIONS = {
-  dir: 'Output',
-  projectId: '62cdd21c6431a9117056d259',
-  formats: ['svg', 'png', 'jpg', 'webp', 'pdf'],
-};
+// use Commander to take in options from the command line
+const program = new Command();
 
 // Zeplin API rate limit is 200 requests per user per minute.
 // Use rateLimit to extend Axios to only make 200 requests per minute (60,000ms)
@@ -38,14 +33,14 @@ const getProjectScreens = async (projectId) => {
   return data;
 };
 
-const getAssetData = async (screen) => {
+const getAssetData = async (screen, projectId, formats) => {
   const { id, name } = screen;
   const { data } = await zeplinClient.screens
-    .getLatestScreenVersion(PROJECT_OPTIONS.projectId, id);
+    .getLatestScreenVersion(projectId, id);
   return data.assets.flatMap(({ displayName, contents }) => {
     // remove any asset that are not in the formats defined in PROJECT_OPTIONS.formats
     const filteredContents = contents.filter((content) => (
-      PROJECT_OPTIONS.formats.includes(content.format)
+      formats.includes(content.format)
     ));
     return filteredContents.map(({ url, format, density }) => ({
       name,
@@ -55,8 +50,7 @@ const getAssetData = async (screen) => {
   });
 };
 
-const downloadAsset = async ({ name, url, filename }, progress) => {
-  const { dir } = PROJECT_OPTIONS;
+const downloadAsset = async ({ name, url, filename }, dir, progress) => {
   try {
     const { data } = await axios.get(url, { responseType: 'stream' });
     await fs.mkdir(`${dir}/${name}`, { recursive: true });
@@ -69,13 +63,24 @@ const downloadAsset = async ({ name, url, filename }, progress) => {
 };
 
 const main = async () => {
-  const projectScreens = await getProjectScreens(PROJECT_OPTIONS.projectId);
+  // add command line options
+  program
+    .option('-p, --projectId <projectId>', 'Project ID')
+    .option('-d, --directory <dir>', 'Output directory')
+    .option('-f, --formats <formats>', 'Formats to download', (val) => val.split(','));
+
+  // parse the command line arguments
+  await program.parseAsync(process.argv);
+
+  const { projectId, directory, formats } = program.opts();
+
+  const projectScreens = await getProjectScreens(projectId);
 
   const assets = (await Promise.all(projectScreens.map(
-    async (screen) => getAssetData(screen),
+    async (screen) => getAssetData(screen, projectId, formats),
   ))).flat();
 
-  const assetsBar = new Progress('  Downloading project assets [:bar] :rate/bps :percent :etas', {
+  const assetsBar = new Progress(`  Downloading project ${projectId} ${formats} assets to ${directory} [:bar] :rate/bps :percent :etas`, {
     complete: '=',
     incomplete: ' ',
     width: 20,
@@ -83,10 +88,10 @@ const main = async () => {
   });
 
   // Remove existing Output folder and create new one at start of script
-  await fs.rm(PROJECT_OPTIONS.dir, { recursive: true, force: true });
-  await fs.mkdir(PROJECT_OPTIONS.dir);
+  await fs.rm(directory, { recursive: true, force: true });
+  await fs.mkdir(directory);
 
-  await batchPromises(10, assets, (asset) => downloadAsset(asset, assetsBar));
+  await batchPromises(10, assets, (asset) => downloadAsset(asset, directory, assetsBar));
 };
 
 await main();
