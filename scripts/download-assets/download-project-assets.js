@@ -57,7 +57,7 @@ const downloadAsset = async ({ name, url, filename }, dir, progress) => {
     await fs.writeFile(`${dir}/${name}/${filename}`, data);
   } catch (err) {
     console.log(`Error downloading ${name}`);
-    console.log(err);
+    console.log(err.config.url);
   }
   progress.tick();
 };
@@ -65,9 +65,9 @@ const downloadAsset = async ({ name, url, filename }, dir, progress) => {
 const main = async () => {
   // add command line options
   program
-    .option('-p, --projectId <projectId>', 'Project ID')
-    .option('-d, --directory <dir>', 'Output directory')
-    .option('-f, --formats <formats>', 'Formats to download', (val) => val.split(','));
+    .requiredOption('-p, --projectId <projectId>', 'Project ID')
+    .requiredOption('-d, --directory <dir>', 'Output directory')
+    .option('-f, --formats <formats...>', 'Formats to download', ['png', 'jpg', 'webp', 'svg', 'pdf']);
 
   // parse the command line arguments
   await program.parseAsync(process.argv);
@@ -80,7 +80,7 @@ const main = async () => {
     async (screen) => getAssetData(screen, projectId, formats),
   ))).flat();
 
-  const assetsBar = new Progress(`  Downloading project ${projectId} ${formats} assets to ${directory} [:bar] :rate/bps :percent :etas`, {
+  const assetsBar = new Progress('  Downloading project assets to [:bar] :rate/bps :percent :etas', {
     complete: '=',
     incomplete: ' ',
     width: 20,
