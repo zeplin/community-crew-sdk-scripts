@@ -33,32 +33,25 @@ const getAllProjects = async () => {
     projects.push(...data);
     i += 1;
   } while (data.length === 100);
-  return projects;
+  return projects.filter((project) => project.status === 'active');
 };
 
 // Get screen data. Screens do not include project names in their response,
 // so add the data for referencing the save directory later
 const getProjectScreens = async (project, progress) => {
-  const { name: projectName } = project;
-  const screens = [];
-  let data;
-  let i = 0;
-  do {
-    // Must access this endpoint with await
-    // eslint-disable-next-line no-await-in-loop
-    ({ data } = await zeplinClient.screens.getProjectScreens(
+  const { name: projectName, numberOfScreens } = project;
+
+  const screens = (await Promise.all([...Array(Math.ceil(numberOfScreens / 100)).keys()].map(
+    (i) => zeplinClient.screens.getProjectScreens(
       project.id,
       { offset: i * 100, limit: 100 },
-    ));
-    const modifiedDataWithProjectName = data.map((screen) => ({
-      projectName,
-      ...screen,
-    }));
-    screens.push(...modifiedDataWithProjectName);
-    i += 1;
-  } while (data.length === 100);
+    ),
+  ))).flat();
   progress.tick();
-  return screens;
+  return screens.flatMap((screen) => screen.data).map((screen) => ({
+    projectName,
+    ...screen,
+  }));
 };
 
 // Zeplin API rate limit is 200 requests per user per minute.
@@ -90,7 +83,6 @@ const main = async () => {
   const screens = (await Promise.all(projects.map(
     async (project) => getProjectScreens(project, projectsBar),
   ))).flat();
-
   console.log(`There are ${screens.length} screens`);
 
   const screensBar = new Progress('  Fetching screens [:bar] :rate/bps :percent :etas', {
