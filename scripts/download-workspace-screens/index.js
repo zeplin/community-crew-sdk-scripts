@@ -15,10 +15,19 @@ const { PERSONAL_ACCESS_TOKEN, WORKSPACE_ID } = process.env;
 // Directory name for saved screens
 const dir = 'Output';
 
+// Zeplin API rate limit is 200 requests per user per minute.
+// Use rateLimit to extend Axios to only make 200 requests per minute (60,000ms)
+const http = rateLimit(axios.create(), { maxRequests: 200, perMilliseconds: 60000 });
+
 // Instantiate ZeplinClient with access token
-const zeplinClient = new ZeplinApi(new Configuration({ accessToken: PERSONAL_ACCESS_TOKEN }));
+const zeplinClient = new ZeplinApi(new Configuration(
+  { accessToken: PERSONAL_ACCESS_TOKEN },
+  undefined,
+  http,
+));
 
 // First get all projects in your workspace
+// Save a new fragment with the "Save selection as Code Fragment" command.
 const getAllProjects = async () => {
   const projects = [];
   let data;
@@ -46,21 +55,18 @@ const getProjectScreens = async (project, progress) => {
       project.id,
       { offset: i * 100, limit: 100 },
     ),
-  ))).flat();
+  ))).flatMap((screen) => screen.data);
+
   progress.tick();
-  return screens.flatMap((screen) => screen.data).map((screen) => ({
+  return screens.map((screen) => ({
     projectName,
     ...screen,
   }));
 };
 
-// Zeplin API rate limit is 200 requests per user per minute.
-// Use rateLimit to extend Axios to only make 200 requests per minute (60,000ms)
-const http = rateLimit(axios.create(), { maxRequests: 200, perMilliseconds: 60000 });
-
 const downloadScreen = async (screen, progress) => {
   const { name, image: { originalUrl }, projectName } = screen;
-  const { data } = await http.get(originalUrl, { responseType: 'stream' });
+  const { data } = await axios.get(originalUrl, { responseType: 'stream' });
 
   await fs.mkdir(`${dir}/${projectName}`, { recursive: true });
   await fs.writeFile(`${dir}/${projectName}/${name}.png`, data);
