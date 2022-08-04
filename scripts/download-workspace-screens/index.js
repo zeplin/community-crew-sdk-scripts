@@ -20,11 +20,13 @@ const dir = 'Output';
 const http = rateLimit(axios.create(), { maxRequests: 200, perMilliseconds: 60000 });
 
 // Instantiate ZeplinClient with access token
-const zeplinClient = new ZeplinApi(new Configuration(
-  { accessToken: PERSONAL_ACCESS_TOKEN },
-  undefined,
-  http,
-));
+const zeplinClient = new ZeplinApi(
+  new Configuration(
+    { accessToken: PERSONAL_ACCESS_TOKEN },
+    undefined,
+    HTTP,
+  )
+);
 
 // First get all projects in your workspace
 // Save a new fragment with the "Save selection as Code Fragment" command.
