@@ -24,8 +24,8 @@ const zeplinClient = new ZeplinApi(
   new Configuration(
     { accessToken: PERSONAL_ACCESS_TOKEN },
     undefined,
-    HTTP,
-  )
+    http,
+  ),
 );
 
 // First get all projects in your workspace
@@ -52,14 +52,17 @@ const getAllProjects = async () => {
 const getProjectScreens = async (project, progress) => {
   const { name: projectName, numberOfScreens } = project;
 
-  const screens = (await Promise.all([...Array(Math.ceil(numberOfScreens / 100)).keys()].map(
-    (i) => zeplinClient.screens.getProjectScreens(
+  const iterations = [...Array(Math.ceil(numberOfScreens / 100)).keys()];
+  const screens = (await Promise.all(iterations.map(async (i) => {
+    const { data } = await zeplinClient.screens.getProjectScreens(
       project.id,
       { offset: i * 100, limit: 100 },
-    ),
-  ))).flatMap((screen) => screen.data);
+    );
+    return data;
+  }))).flat();
 
   progress.tick();
+
   return screens.map((screen) => ({
     projectName,
     ...screen,
