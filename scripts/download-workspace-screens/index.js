@@ -15,10 +15,21 @@ const { PERSONAL_ACCESS_TOKEN, WORKSPACE_ID } = process.env;
 // Directory name for saved screens
 const dir = 'Output';
 
+// Zeplin API rate limit is 200 requests per user per minute.
+// Use rateLimit to extend Axios to only make 200 requests per minute (60,000ms)
+const http = rateLimit(axios.create(), { maxRequests: 200, perMilliseconds: 60000 });
+
 // Instantiate ZeplinClient with access token
-const zeplinClient = new ZeplinApi(new Configuration({ accessToken: PERSONAL_ACCESS_TOKEN }));
+const zeplinClient = new ZeplinApi(
+  new Configuration(
+    { accessToken: PERSONAL_ACCESS_TOKEN },
+    undefined,
+    http,
+  ),
+);
 
 // First get all projects in your workspace
+// Save a new fragment with the "Save selection as Code Fragment" command.
 const getAllProjects = async () => {
   const projects = [];
   let data;
@@ -33,41 +44,34 @@ const getAllProjects = async () => {
     projects.push(...data);
     i += 1;
   } while (data.length === 100);
-  return projects;
+  return projects.filter((project) => project.status === 'active');
 };
 
 // Get screen data. Screens do not include project names in their response,
 // so add the data for referencing the save directory later
 const getProjectScreens = async (project, progress) => {
-  const { name: projectName } = project;
-  const screens = [];
-  let data;
-  let i = 0;
-  do {
-    // Must access this endpoint with await
-    // eslint-disable-next-line no-await-in-loop
-    ({ data } = await zeplinClient.screens.getProjectScreens(
+  const { name: projectName, numberOfScreens } = project;
+
+  const iterations = [...Array(Math.ceil(numberOfScreens / 100)).keys()];
+  const screens = (await Promise.all(iterations.map(async (i) => {
+    const { data } = await zeplinClient.screens.getProjectScreens(
       project.id,
       { offset: i * 100, limit: 100 },
-    ));
-    const modifiedDataWithProjectName = data.map((screen) => ({
-      projectName,
-      ...screen,
-    }));
-    screens.push(...modifiedDataWithProjectName);
-    i += 1;
-  } while (data.length === 100);
-  progress.tick();
-  return screens;
-};
+    );
+    return data;
+  }))).flat();
 
-// Zeplin API rate limit is 200 requests per user per minute.
-// Use rateLimit to extend Axios to only make 200 requests per minute (60,000ms)
-const http = rateLimit(axios.create(), { maxRequests: 200, perMilliseconds: 60000 });
+  progress.tick();
+
+  return screens.map((screen) => ({
+    projectName,
+    ...screen,
+  }));
+};
 
 const downloadScreen = async (screen, progress) => {
   const { name, image: { originalUrl }, projectName } = screen;
-  const { data } = await http.get(originalUrl, { responseType: 'stream' });
+  const { data } = await axios.get(originalUrl, { responseType: 'stream' });
 
   await fs.mkdir(`${dir}/${projectName}`, { recursive: true });
   await fs.writeFile(`${dir}/${projectName}/${name}.png`, data);
@@ -90,7 +94,6 @@ const main = async () => {
   const screens = (await Promise.all(projects.map(
     async (project) => getProjectScreens(project, projectsBar),
   ))).flat();
-
   console.log(`There are ${screens.length} screens`);
 
   const screensBar = new Progress('  Fetching screens [:bar] :rate/bps :percent :etas', {
