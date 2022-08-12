@@ -20,7 +20,7 @@ const dir = 'Output';
 const http = rateLimit(axios.create(), { maxRequests: 200, perMilliseconds: 60000 });
 
 // Instantiate ZeplinClient with access token
-const zeplinClient = new ZeplinApi(
+const zeplin = new ZeplinApi(
   new Configuration(
     { accessToken: PERSONAL_ACCESS_TOKEN },
     undefined,
@@ -29,15 +29,13 @@ const zeplinClient = new ZeplinApi(
 );
 
 // First get all projects in your workspace
-// Save a new fragment with the "Save selection as Code Fragment" command.
 const getAllProjects = async () => {
   const projects = [];
   let data;
   let i = 0;
   do {
-    // Must access this endpoint with await
     // eslint-disable-next-line no-await-in-loop
-    ({ data } = await zeplinClient.organizations.getOrganizationProjects(WORKSPACE_ID, {
+    ({ data } = await zeplin.organizations.getOrganizationProjects(WORKSPACE_ID, {
       offset: i * 100,
       limit: 100,
     }));
@@ -49,19 +47,17 @@ const getAllProjects = async () => {
 
 // Get screen data. Screens do not include project names in their response,
 // so add the data for referencing the save directory later
-const getProjectScreens = async (project, progress) => {
+const getProjectScreens = async (project) => {
   const { name: projectName, numberOfScreens } = project;
 
   const iterations = [...Array(Math.ceil(numberOfScreens / 100)).keys()];
   const screens = (await Promise.all(iterations.map(async (i) => {
-    const { data } = await zeplinClient.screens.getProjectScreens(
+    const { data } = await zeplin.screens.getProjectScreens(
       project.id,
       { offset: i * 100, limit: 100 },
     );
     return data;
   }))).flat();
-
-  progress.tick();
 
   return screens.map((screen) => ({
     projectName,
@@ -84,15 +80,8 @@ const main = async () => {
 
   console.log(`There are ${projects.length} projects`);
 
-  const projectsBar = new Progress('  Fetching screens [:bar] :rate/bps :percent :etas', {
-    complete: '=',
-    incomplete: ' ',
-    width: 20,
-    total: projects.length,
-  });
-
   const screens = (await Promise.all(projects.map(
-    async (project) => getProjectScreens(project, projectsBar),
+    async (project) => getProjectScreens(project),
   ))).flat();
   console.log(`There are ${screens.length} screens`);
 
