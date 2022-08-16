@@ -24,6 +24,7 @@
     "batch-promises": "^0.0.3",
     "commander": "^9.4.0",
     "dotenv": "^16.0.1",
+    "p-limit": "^4.0.0",
     "progress": "^2.0.3"
   },
   "devDependencies": {
