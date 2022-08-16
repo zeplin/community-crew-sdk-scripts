@@ -2,7 +2,6 @@ import { ZeplinApi, Configuration } from '@zeplin/sdk';
 import Progress from 'progress';
 import axios from 'axios';
 import fs from 'fs/promises';
-import batchPromises from 'batch-promises';
 import { config } from 'dotenv';
 import rateLimit from 'axios-rate-limit';
 import pLimit from 'p-limit';
