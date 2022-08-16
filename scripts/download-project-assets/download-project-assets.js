@@ -6,6 +6,7 @@ import batchPromises from 'batch-promises';
 import { config } from 'dotenv';
 import rateLimit from 'axios-rate-limit';
 import { Command } from 'commander';
+import pLimit from 'p-limit';
 
 // Set your dotenv config to the root directory where the .env file lives
 config({ path: '../../.env' });
@@ -20,22 +21,22 @@ const program = new Command();
 // Use rateLimit to extend Axios to only make 200 requests per minute (60,000ms)
 const http = rateLimit(axios.create(), { maxRequests: 200, perMilliseconds: 60000 });
 
-// Instantiate ZeplinClient with access token, add our http client to the ZeplinClient
-const zeplinClient = new ZeplinApi(new Configuration(
+// Instantiate zeplin with access token, add our http client to the zeplin
+const zeplin = new ZeplinApi(new Configuration(
   { accessToken: PERSONAL_ACCESS_TOKEN },
   undefined,
   http,
 ));
 
 const getProjectScreens = async (projectId) => {
-  const { data } = await zeplinClient.screens.getProjectScreens(projectId);
+  const { data } = await zeplin.screens.getProjectScreens(projectId);
 
   return data;
 };
 
 const getAssetData = async (screen, projectId, formats) => {
   const { id, name } = screen;
-  const { data } = await zeplinClient.screens
+  const { data } = await zeplin.screens
     .getLatestScreenVersion(projectId, id);
   return data.assets.flatMap(({ displayName, contents }) => {
     // remove any asset that are not in the formats defined in PROJECT_OPTIONS.formats
@@ -85,7 +86,12 @@ program
     await fs.rm(directory, { recursive: true, force: true });
     await fs.mkdir(directory);
 
-    await batchPromises(10, assets, (asset) => downloadAsset(asset, directory, assetsBar));
+    const limit = pLimit(20);
+
+    const downloadAssetPromises = assets.map((asset) => (
+      limit(() => downloadAsset(asset, directory, assetsBar))));
+
+    await Promise.all(downloadAssetPromises);
   });
 
 program.parse(process.argv);
