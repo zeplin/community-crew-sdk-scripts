@@ -20,12 +20,12 @@ const dir = 'Output';
 const http = rateLimit(axios.create(), { maxRequests: 200, perMilliseconds: 60000 });
 
 // Instantiate ZeplinClient with access token
-const zeplinClient = new ZeplinApi(
+const zeplin = new ZeplinApi(
   new Configuration(
     { accessToken: PERSONAL_ACCESS_TOKEN },
-    undefined,
-    http,
   ),
+  undefined,
+  http,
 );
 
 // First get all projects in your workspace
@@ -37,7 +37,7 @@ const getAllProjects = async () => {
   do {
     // Must access this endpoint with await
     // eslint-disable-next-line no-await-in-loop
-    ({ data } = await zeplinClient.organizations.getOrganizationProjects(WORKSPACE_ID, {
+    ({ data } = await zeplin.organizations.getOrganizationProjects(WORKSPACE_ID, {
       offset: i * 100,
       limit: 100,
     }));
@@ -54,7 +54,7 @@ const getProjectScreens = async (project) => {
 
   const iterations = [...Array(Math.ceil(numberOfScreens / 100)).keys()];
   const screens = (await Promise.all(iterations.map(async (i) => {
-    const { data } = await zeplinClient.screens.getProjectScreens(
+    const { data } = await zeplin.screens.getProjectScreens(
       project.id,
       { offset: i * 100, limit: 100 },
     );

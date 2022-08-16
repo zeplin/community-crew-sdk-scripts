@@ -21,11 +21,14 @@ const program = new Command();
 const http = rateLimit(axios.create(), { maxRequests: 200, perMilliseconds: 60000 });
 
 // Instantiate zeplin with access token, add our http client to the zeplin
-const zeplin = new ZeplinApi(new Configuration(
-  { accessToken: PERSONAL_ACCESS_TOKEN },
+
+const zeplin = new ZeplinApi(
+  new Configuration(
+    { accessToken: PERSONAL_ACCESS_TOKEN },
+  ),
   undefined,
   http,
-));
+);
 
 const getProjectScreens = async (projectId) => {
   const { data } = await zeplin.screens.getProjectScreens(projectId);
