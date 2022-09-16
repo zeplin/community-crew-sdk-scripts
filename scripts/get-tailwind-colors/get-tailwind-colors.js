@@ -39,4 +39,4 @@ program
     console.log(colors);
   });
 
-program.parse(process.argv);
+program.parseAsync(process.argv);
