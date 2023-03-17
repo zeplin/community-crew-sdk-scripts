@@ -1,12 +1,13 @@
 import { ZeplinApi, Configuration } from '@zeplin/sdk';
 import { Command } from 'commander';
 import { config } from 'dotenv';
+import fs from 'fs/promises';
 
 // Set your dotenv config to the root directory where the .env file lives
 config({ path: '../../.env' });
 
-// Extract PAT and Workspace from .env
-const { PERSONAL_ACCESS_TOKEN } = process.env;
+// Extract PAT and colors file path from .env
+const { PERSONAL_ACCESS_TOKEN, THEME_COLORS_PATH } = process.env;
 
 // Use Commander to take in options from the command line
 const program = new Command();
@@ -29,8 +30,12 @@ program
   .action(async ({ styleguideId }) => {
     const colors = await getDesignTokenColors(styleguideId);
 
-    // Present results to command line for manual copy into Tailwind config
-    console.log(JSON.stringify(colors, null, 2));
+    // Put colors in module.exports
+    const parsedColors = `module.exports = ${JSON.stringify(colors, null, 2).replaceAll('"', "'")}`;
+    console.log(parsedColors);
+
+    // Write colors to theme colors file defined in ENV
+    fs.writeFile(THEME_COLORS_PATH, parsedColors, 'utf8');
   });
 
 program.parseAsync(process.argv);
