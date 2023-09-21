@@ -14,33 +14,79 @@ const program = new Command();
 // Instantiate zeplin with access token, add our http client to the zeplin
 const zeplin = new ZeplinApi(new Configuration({ accessToken: PERSONAL_ACCESS_TOKEN }));
 
-const getWorkspaceMember = async (email) => {
+const limit = 2; // Define the number of items to fetch per page
+let offset = 0; // Initialize the offset to 0
+
+const getWorkspaceMembers = async (offset, limit) => {
   const { data } = await zeplin.organizations.getOrganizationMembers(
     WORKSPACE_ID,
-    email,
+    {
+      limit,
+      offset,
+    },
   );
-  console.log(data[0]);
-  return data[0].user.id;
+  return data;
 };
 
-const getProjects = async (userId) => {
-  const projects = await zeplin.organizations.getOrganizationMemberProjects(
+const fetchAllWorkspaceMembers = () => {
+  let currentPage = 1;
+  let allData = []; // Array to store all data
+  const fetchPage = () => getWorkspaceMembers(offset, limit)
+    .then((data) => {
+      // Check if there's no more data to fetch
+      if (data.length === 0) {
+        return; // Exit the loop if there are no more results
+      }
+      // Append the data to the allData array
+      allData = allData.concat(data);
+      // Update the offset for the next page
+      offset += limit;
+      // Increment the current page
+      currentPage += 1;
+      // Fetch the next page recursively
+      return fetchPage();
+    });
+
+  // Start fetching data and return a promise that resolves when done
+  return fetchPage().then(() => allData); // Return the accumulated data
+};
+
+const getProjects = async (user) => {
+  const { data } = await zeplin.organizations.getOrganizationMemberProjects(
     WORKSPACE_ID,
-    userId,
+    user.user.id,
   );
-  return projects.data.map((project) => project.name);
+
+  const parsedData = data.map((project) => (
+    {
+      name: project.name,
+      id: project.id,
+    }
+  ));
+
+  return (
+    {
+      user: user.user.email,
+      lastSeen: user.user.lastSeen,
+      projects: parsedData,
+    }
+  );
 };
 
 // add command line options
 program
-  .requiredOption('-u, --userEmail <userEmail>', 'User Email')
-  .action(async ({ userEmail }) => {
-    const user = await getWorkspaceMember(userEmail);
-    console.log(`getting projects for ${userEmail}: ${user}`);
+  .action(async () => {
+    const users = await fetchAllWorkspaceMembers();
+    const userProjects = users.map((user) => getProjects(user));
+    const userResults = await Promise.all(userProjects);
 
-    const projects = await getProjects(user);
-
-    console.log(projects);
+    // Combine the results into a single array
+    const combinedUserData = userResults.reduce((acc, userData) => {
+      acc.push(userData);
+      return acc;
+    }, []);
+    console.log(JSON.stringify(combinedUserData, null, 2));
+    return combinedUserData;
   });
 
 program.parse(process.argv);
