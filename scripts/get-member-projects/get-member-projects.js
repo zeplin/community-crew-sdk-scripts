@@ -14,7 +14,7 @@ const program = new Command();
 // Instantiate zeplin with access token, add our http client to the zeplin
 const zeplin = new ZeplinApi(new Configuration({ accessToken: PERSONAL_ACCESS_TOKEN }));
 
-const limit = 2; // Define the number of items to fetch per page
+const limit = 30; // Define the number of items to fetch per page
 let offset = 0; // Initialize the offset to 0
 
 const getWorkspaceMembers = async (offset, limit) => {
