@@ -52,9 +52,12 @@ const fetchAllWorkspaceMembers = () => {
 };
 
 const getProjects = async (user) => {
+  const { email, lastSeen, id } = user.user;
+  const { role } = user;
+
   const { data } = await zeplin.organizations.getOrganizationMemberProjects(
     WORKSPACE_ID,
-    user.user.id,
+    id,
   );
 
   const parsedData = data.map((project) => (
@@ -66,8 +69,11 @@ const getProjects = async (user) => {
 
   return (
     {
-      user: user.user.email,
-      lastSeen: user.user.lastSeen,
+      user: {
+        email,
+        lastSeen,
+        role,
+      },
       projects: parsedData,
     }
   );
