@@ -111,7 +111,6 @@ program
       styleguideId,
       { formats, identifier, density },
     );
-    console.log(density);
     const assetsBar = new Progress('  Downloading styleguide icons [:bar] :rate/bps :percent :etas', {
       complete: '=',
       incomplete: ' ',
