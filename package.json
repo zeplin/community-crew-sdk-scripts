@@ -18,11 +18,12 @@
   },
   "homepage": "https://github.com/zeplin/community-crew-sdk-scripts#readme",
   "dependencies": {
-    "@zeplin/sdk": "^1.13.0",
+    "@zeplin/sdk": "^1.19.0",
     "axios": "^0.27.2",
     "axios-rate-limit": "^1.3.0",
     "commander": "^9.4.0",
     "dotenv": "^16.0.1",
+    "json-2-csv": "^5.5.1",
     "p-limit": "^4.0.0",
     "progress": "^2.0.3"
   },
