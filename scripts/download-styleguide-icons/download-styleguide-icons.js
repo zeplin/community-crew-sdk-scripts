@@ -30,6 +30,35 @@ const zeplin = new ZeplinApi(
   http,
 );
 
+// filter styleguide components list with the provided filter
+
+const filterComponentsByIdentifier = (components, identifier) => (
+  components.filter((item) => item.name.startsWith(identifier)));
+
+// parse data to create array with usable objects for download process
+
+const parseComponents = (filteredComponents, formats, density) => filteredComponents.reduce((acc, item) => {
+  const latestVersion = item.latestVersion || {};
+  const assets = latestVersion.assets || [];
+
+  // density array returns string types when command is run. Convert to numbers.
+  const parsedDensities = density.map((str) => Number(str));
+
+  assets.forEach((asset) => {
+    const { layerName } = asset;
+    const contents = asset.contents || [];
+    contents.forEach((content) => {
+      if (formats.includes(content.format)) {
+        if (parsedDensities.includes(content.density)) {
+          acc.push({ name: layerName, url: content.url, filename: `${layerName.replaceAll('/', '-')}-${content.density}x.${content.format}` });
+        }
+      }
+    });
+  });
+
+  return acc;
+}, []);
+
 // Get all styleguide components while handling pagination
 
 const getStyleguideComponents = async (
@@ -38,8 +67,10 @@ const getStyleguideComponents = async (
     offset = 0, limit = 30, includeLatestVersion = true, formats, identifier, density,
   },
 ) => {
-  let allData = [];
+  // initialize array to save all components for paginated results
+  let components = [];
   let hasMoreData = true;
+
   // Handle pagination
   while (hasMoreData) {
     const { data } = await zeplin.components.getStyleguideComponents(
@@ -50,35 +81,14 @@ const getStyleguideComponents = async (
     if (data.length === 0) {
       hasMoreData = false; // No more data, exit loop
     } else {
-      allData = allData.concat(data);
+      components = components.concat(data);
       offset += limit; // Update offset for next page
     }
   }
 
-  // Remove any components that don't include the identifier in naming convention
-  const filteredDataByName = allData.filter((item) => item.name.startsWith(identifier));
-
-  return filteredDataByName.reduce((acc, item) => {
-    const latestVersion = item.latestVersion || {};
-    const assets = latestVersion.assets || [];
-
-    // density array returns string types when command is run. Convert to numbers.
-    const parsedDensities = density.map((str) => Number(str));
-
-    assets.forEach((asset) => {
-      const { layerName } = asset;
-      const contents = asset.contents || [];
-      contents.forEach((content) => {
-        if (formats.includes(content.format)) {
-          if (parsedDensities.includes(content.density)) {
-            acc.push({ name: layerName, url: content.url, filename: `${layerName.replaceAll('/', '-')}-${content.density}x.${content.format}` });
-          }
-        }
-      });
-    });
-
-    return acc;
-  }, []);
+  const filteredComponents = filterComponentsByIdentifier(components, identifier);
+  const parsedComponents = parseComponents(filteredComponents, formats, density);
+  return parsedComponents;
 };
 
 const downloadAsset = async ({ name, url, filename }, dir, progress) => {
